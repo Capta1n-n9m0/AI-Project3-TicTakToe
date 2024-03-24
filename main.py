@@ -2,6 +2,7 @@ import sys
 import dotenv
 import os
 from HttpGameClient import HttpGameClient
+import argparse
 
 """
 Communication with the API is done through HTTP REST requests.
@@ -22,21 +23,13 @@ def getApiCredentials() -> tuple[str, str]:
 
 def main(argv: list[str]) -> None:
   api_key, user_id = getApiCredentials()
+  parser = argparse.ArgumentParser(description="Tic Tac Toe AI")
+  # Operation to create team with team name
+  parser.add_argument("--team", type=str, help="Create a team with the given name")
   
-  with HttpGameClient(api_key, user_id) as client:
-    try:
-      print(client.exampleGet(params={"type": "help"}))
-    except ValueError as e:
-      print(e, file=sys.stderr)
-    try:
-      print(client.examplePost())
-    except ValueError as e:
-      print(e, file=sys.stderr)
-    # print(client.createTeam("Test Team"))
-    # print(client.addTeamMember(1, 1))
-    # print(client.removeTeamMember(1, 1))
-    # print(client.getTeamMembers(1))
-    # print(client.getMyTeams())
+  # Operation to add user to team
+  parser.add_argument("--add-user", type=str, help="Add a user to the team")
+  
 
 
 if __name__ == "__main__":
