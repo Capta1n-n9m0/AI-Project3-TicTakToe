@@ -188,6 +188,16 @@ class HttpGameClient(Session):
     response = self.get(self.endpoint, params={"type": "moves", "gameId": game_id, "count": count})
     return response.json()
   
+  def getGameDetails(self, game_id: int) -> dict:
+    r"""
+    Gets the details of a game.
+    :param game_id: ID of the game
+    :return: Dictionary of game details
+    TODO: improve return type
+    """
+    response = self.get(self.endpoint, params={"type": "gameDetails", "gameId": game_id})
+    return response.json().get("game")
+  
   def getBoard(self, game_id: int) -> dict[tuple[int, int], int]:
     r"""
     Gets the board of a game.
