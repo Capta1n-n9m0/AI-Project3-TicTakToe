@@ -1,5 +1,5 @@
 from requests import Session
-
+from dataclasses import dataclass
 
 CELLS_TO_TEXT = [
   "O",
@@ -12,6 +12,68 @@ TEXT_TO_CELLS: dict[str, int] = {
   "X": 1,
   "-": 2
 }
+
+
+def str_to_tuple(key: str):
+  x, y = key.strip().split(',')
+  return int(x), int(y)
+
+@dataclass
+class MoveData:
+  modeId: int
+  gameId: int
+  teamId: int
+  move: tuple[int, int]
+  symbol: int
+  moveX: int
+  moveY: int
+  
+  @classmethod
+  def from_dict(cls, data: dict):
+    return cls(
+      modeId=int(data.get("moveId")),
+      gameId=int(data.get("gameId")),
+      teamId=int(data.get("teamId")),
+      move=str_to_tuple(data.get("move")),
+      symbol=TEXT_TO_CELLS[data.get("symbol")],
+      moveX=int(data.get("moveX")),
+      moveY=int(data.get("moveY"))
+    )
+
+@dataclass
+class GameData:
+  gameId: int
+  gameType: str
+  moves: int
+  boardSize: int
+  target: int
+  team1Id: int
+  team1Name: str
+  team2Id: int
+  team2Name: str
+  secondsPerMove: int
+  status: int
+  winnerTeamId: int | None
+  turnTeamId: int | None
+  
+  @classmethod
+  def from_dict(cls, data: dict):
+    return cls(
+      gameId=int(data.get("gameid")),
+      gameType=data.get("gametype"),
+      moves=int(data.get("moves")),
+      boardSize=int(data.get("boardsize")),
+      target=int(data.get("target")),
+      team1Id=int(data.get("team1id")),
+      team1Name=data.get("team1name"),
+      team2Id=int(data.get("team2id")),
+      team2Name=data.get("team2name"),
+      secondsPerMove=int(data.get("secondspermove")),
+      status=int(data.get("status")),
+      winnerTeamId=int(data.get("winnerteamid")) if data.get("winnerteamid") is not None else None,
+      turnTeamId=int(data.get("turnteamid")) if data.get("turnteamid") is not None else None
+    )
+  
 
 
 class HttpGameClient(Session):
@@ -177,16 +239,24 @@ class HttpGameClient(Session):
     })
     return int(response.json().get("moveId"))
   
-  def getMoves(self, game_id: int, count: int = 20) -> list[dict]:
+  def getMoves(self, game_id: int, count: int = 20) -> list[MoveData]:
     r"""
     Gets a list of moves in a game.
     :param count: Number of moves to get
     :param game_id: ID of the game
     :return: List of moves
-    #TODO: Add move type
     """
     response = self.get(self.endpoint, params={"type": "moves", "gameId": game_id, "count": count})
-    return response.json()
+    return [MoveData.from_dict(move) for move in response.json().get("moves")]
+  
+  def getGameDetails(self, game_id: int) -> GameData:
+    r"""
+    Gets the details of a game.
+    :param game_id: ID of the game
+    :return: Dictionary of game details
+    """
+    response = self.get(self.endpoint, params={"type": "gameDetails", "gameId": game_id})
+    return GameData.from_dict(response.json())
   
   def getBoard(self, game_id: int) -> dict[tuple[int, int], int]:
     r"""
@@ -196,10 +266,6 @@ class HttpGameClient(Session):
     """
     response = self.get(self.endpoint, params={"type": "boardMap", "gameId": game_id})
     board = response.json().get("output")
-    
-    def str_to_tuple(key: str):
-      x, y = key.strip().split(',')
-      return int(x), int(y)
     
     return {str_to_tuple(key): TEXT_TO_CELLS[value] for key, value in board.items()}
   
