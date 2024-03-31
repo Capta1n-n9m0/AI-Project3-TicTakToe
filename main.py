@@ -2,6 +2,7 @@ import sys
 import dotenv
 import os
 import argparse
+from HttpGameClient import HttpGameClient, Session, CELLS_TO_TEXT
 
 """
 Communication with the API is done through HTTP REST requests.
@@ -20,7 +21,7 @@ def getApiCredentials() -> tuple[str, str]:
   return api_key, user_id
 
 def setupArgs() -> argparse.ArgumentParser:
-  parser = argparse.ArgumentParser(description="Tic Tac Toe AI")
+  parser = argparse.ArgumentParser(description="Tic TaK Toe AI")
   parser.add_argument(
     "operation",
     choices=[
@@ -30,60 +31,76 @@ def setupArgs() -> argparse.ArgumentParser:
     help="Operation to perform"
   )
   parser.add_argument(
-    "-c",
     "--create",
     action="store_true",
     help="Create a team or game"
   )
   parser.add_argument(
-    "-r",
+    "--add",
+    action="store_true",
+    help="Add team members"
+  )
+  parser.add_argument(
     "--remove",
     action="store_true",
     help="Remove team members"
   )
   parser.add_argument(
-    "-l",
+    "-l"
     "--list",
     action="store_true",
     help="List teams or games"
   )
   parser.add_argument(
-    "-n",
+    "--members",
+    action="store_true",
+    help="List team members"
+  )
+  parser.add_argument(
     "--name",
+    type=str,
     help="Name of the team"
   )
   parser.add_argument(
-    "-t",
     "--team",
     nargs="*",
     type=int,
     help="ID of the team"
   )
   parser.add_argument(
-    "-u",
     "--user",
     type=int,
     nargs="*",
     help="ID of the user"
   )
   parser.add_argument(
-    "-b",
     "--board",
-    type=int,
-    help="Size of the board"
+    action="store_true",
+    help="Board representation"
   )
   parser.add_argument(
-    "-s",
     "--size",
     type=int,
-    help="Size of the board"
+    help="Size of the board",
+    deault=20
   )
   parser.add_argument(
-    "-g",
     "--target",
     type=int,
-    help="Target number of consecutive marks to win"
+    help="Target number of consecutive marks to win",
+    default=10
   )
+  parser.add_argument(
+    "--game",
+    type=int,
+    help="ID of the game"
+  )
+  parser.add_argument(
+    "--moves",
+    type=int,
+    help="List game moves"
+  )
+  
   return parser
 
 
@@ -101,6 +118,81 @@ def main(argv: list[str]) -> None:
     raise ValueError("Invalid operation")
   
   
+  with Session() as session:
+    client = (HttpGameClient(session)
+              .setApiKey(api_key)
+              .setUserId(user_id)
+              .build())
+    
+    if args.operation == "team":
+      if args.create:
+        if args.name is None:
+          raise ValueError("Name is required")
+        team = client.createTeam(args.name)
+        print(f"Team created: {team}")
+      elif args.remove:
+        if args.team is None:
+          raise ValueError("Team ID is required")
+        if args.user is None:
+          raise ValueError("You must specify at least one user ID")
+        team_id = args.team[0]
+        for user_id in args.user:
+          client.removeTeamMember(team_id, user_id)
+        print("Teams removed")
+      elif args.list:
+        teams = client.getMyTeams()
+        print("Teams:")
+        for team in teams:
+          print(team)
+      elif args.add:
+        if args.team is None or args.user is None:
+          raise ValueError("Team ID and user ID are required")
+        team_id, user_id = args.team[0]
+        for user_id in args.user:
+          client.addTeamMember(team_id, user_id)
+        print("Members added")
+      elif args.members:
+        if args.team is None:
+          raise ValueError("Team ID is required")
+        team_id = args.team[0]
+        members = client.getTeamMembers(team_id)
+        print("Members:")
+        for member in members:
+          print(member)
+      else:
+        raise ValueError("Invalid operation")
+    elif args.operation == "game":
+      if args.create:
+        if args.size is None or args.target is None:
+          raise ValueError("Board size, size and target are required")
+        if args.team is None or len(args.team) != 2:
+          raise ValueError("Two team IDs are required")
+        team1, team2 = args.team
+        game = client.createGame(team1, team2, args.size, args.target)
+        print(f"Game created: {game}")
+      elif args.list:
+        games = client.getMyGames()
+        print("Games:")
+        for game in games:
+          print(game)
+      elif args.board:
+        if args.game is None:
+          raise ValueError("Game ID is required")
+        board = client.getBoardString(args.game)
+        print(board)
+      elif args.moves:
+        if args.game is None:
+          raise ValueError("Game ID is required")
+        moves = client.getMoves(args.game, args.moves)
+        print("Moves:")
+        for move in moves:
+          print(f"Team {move.teamId} placed {CELLS_TO_TEXT[move.symbol]} at {move.x}, {move.y}")
+      else:
+        raise ValueError("Invalid operation")
+    else:
+      raise ValueError("Invalid operation")
+  
+    
   
 
 

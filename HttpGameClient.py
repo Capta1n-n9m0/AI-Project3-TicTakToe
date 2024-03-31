@@ -1,5 +1,6 @@
-from requests import Session
+from requests import Session as RSession, Response
 from dataclasses import dataclass
+from abc import ABC, abstractmethod
 
 CELLS_TO_TEXT = [
   "O",
@@ -75,8 +76,30 @@ class GameData:
     )
   
 
+class IHttpClient(ABC):
+  @abstractmethod
+  def get(self, url: str, **kwargs) -> Response:
+    pass
+  
+  @abstractmethod
+  def post(self, url: str, **kwargs) -> Response:
+    pass
+  
+  @abstractmethod
+  def request(self, method: str, url: str, **kwargs) -> Response:
+    pass
 
-class HttpGameClient(Session):
+class Session(RSession, IHttpClient):
+  def request(self, method: str, url: str, **kwargs) -> Response:
+    return super().request(method, url, **kwargs)
+  
+  def get(self, url: str, **kwargs) -> Response:
+    return super().get(url, **kwargs)
+  
+  def post(self, url: str, **kwargs) -> Response:
+    return super().post(url, **kwargs)
+
+class HttpGameClient:
   r"""
   This class is used to communicate with the API.
   It is a subclass of the requests.Session class.
@@ -84,24 +107,40 @@ class HttpGameClient(Session):
   The API requires an API key and a user ID to authenticate the user.
   The class provides methods to interact with the API.
   """
-  def __init__(self, api_key: str, user_id: str):
+  api_key: str
+  user_id: str
+  sender: IHttpClient
+  headers: dict[str, str]
+  endpoint: str
+  
+  def __init__(self, sender: IHttpClient):
     r"""
     Communication with the API is done through HTTP REST requests.
     API requires an API key and a user ID to authenticate the user.
-    :param api_key: API key
-    :param user_id: User ID
     """
-    super().__init__()
-    self.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
-      })
-    self.headers.update({
-        "x-api-key": api_key,
-        "userId": user_id
-      })
+    self.sender = sender
+    
+  def setApiKey(self, api_key: str):
     self.api_key = api_key
+    return self
+  
+  def setUserId(self, user_id: str):
     self.user_id = user_id
+    return self
+  
+  def build(self):
+    if self.api_key is None:
+      raise ValueError("API key is not set")
+    if self.user_id is None:
+      raise ValueError("User ID is not set")
+    
+    self.headers = {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
+      "x-api-key": self.api_key,
+      "userId": self.user_id
+    }
     self.endpoint = "https://www.notexponential.com/aip2pgaming/api/index.php"
+    return self
   
   def request(self, method: str, url: str, **kwargs):
     r"""
@@ -113,7 +152,7 @@ class HttpGameClient(Session):
     :raises ValueError: If the response status code is not 200 or if the response contains a code with the value "FAIL"
     :return: Response object
     """
-    response = super().request(method, url, **kwargs)
+    response = self.sender.request(method, url, headers=self.headers, **kwargs)
     if response.status_code != 200:
       raise ValueError(f"Request failed with status code {response.status_code}")
     
@@ -127,6 +166,12 @@ class HttpGameClient(Session):
       raise ValueError(f"API request failed with message: {message}")
     
     return response
+  
+  def get(self, url: str, **kwargs) -> Response:
+    return self.request("GET", url, **kwargs)
+  
+  def post(self, url: str, **kwargs) -> Response:
+    return self.request("POST", url, **kwargs)
   
   def exampleGet(self, params: dict = None):
     r"""
