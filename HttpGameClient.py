@@ -78,6 +78,10 @@ class GameData:
   
 
 class IHttpClient(ABC):
+  r"""
+  Interface for an HTTP client.
+  It provides methods to make GET and POST requests.
+  """
   @abstractmethod
   def get(self, url: str, **kwargs) -> Response:
     pass
@@ -91,6 +95,10 @@ class IHttpClient(ABC):
     pass
 
 class Session(RSession, IHttpClient):
+  r"""
+  Implementation of the IHttpClient interface using the requests.Session class.
+  Works as a wrapper around the requests.Session class.
+  """
   def request(self, method: str, url: str, **kwargs) -> Response:
     return super().request(method, url, **kwargs)
   
@@ -102,11 +110,13 @@ class Session(RSession, IHttpClient):
 
 class HttpGameClient:
   r"""
-  This class is used to communicate with the API.
-  It is a subclass of the requests.Session class.
-  It is used to make REST HTTP requests to the API.
-  The API requires an API key and a user ID to authenticate the user.
-  The class provides methods to interact with the API.
+  An abstraction of the API for the game.
+  It provides methods to interact with the API.
+  It requires an API key and a user ID to make requests.
+  It also requires an instance of a class that implements the IHttpClient interface to make requests.
+  It uses dependency injection to allow for easy testing.
+  It uses the builder pattern to create the client.
+  Building the client sets the headers and the endpoint.
   """
   api_key: str
   user_id: str
@@ -116,20 +126,34 @@ class HttpGameClient:
   
   def __init__(self, sender: IHttpClient):
     r"""
-    Communication with the API is done through HTTP REST requests.
-    API requires an API key and a user ID to authenticate the user.
+    Initializes the client with the given sender.
     """
     self.sender = sender
     
   def setApiKey(self, api_key: str):
+    r"""
+    Sets the API key for the client.
+    :param api_key:
+    :return: Instance of the client
+    """
     self.api_key = api_key
     return self
   
   def setUserId(self, user_id: str):
+    r"""
+    Sets the user ID for the client.
+    :param user_id:
+    :return: Instance of the client
+    """
     self.user_id = user_id
     return self
   
   def build(self):
+    r"""
+    Builds the client by setting the headers and the endpoint.
+    :raises ValueError: If the API key or the user ID is not set
+    :return: Instance of the client
+    """
     if self.api_key is None:
       raise ValueError("API key is not set")
     if self.user_id is None:
@@ -146,13 +170,15 @@ class HttpGameClient:
   def request(self, method: str, url: str, **kwargs):
     r"""
     This method is used to make requests to the API.
-    It is overridden to add additional checks to the response.
     It checks if the response status code is 200 and if the response contains a code.
     If the code is "FAIL", it raises an exception with the message from the response.
     
     :raises ValueError: If the response status code is not 200 or if the response contains a code with the value "FAIL"
     :return: Response object
     """
+    if self.headers is None:
+      raise ValueError("Headers are not set")
+    
     response = self.sender.request(method, url, headers=self.headers, **kwargs)
     if response.status_code != 200:
       raise ValueError(f"Request failed with status code {response.status_code}")
