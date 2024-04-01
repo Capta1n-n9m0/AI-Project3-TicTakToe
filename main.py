@@ -100,6 +100,11 @@ def setupArgs() -> argparse.ArgumentParser:
     type=int,
     help="List game moves"
   )
+  parser.add_argument(
+    "--details",
+    action="store_true",
+    help="Show game details"
+  )
   
   return parser
 
@@ -116,7 +121,7 @@ def main(argv: list[str]) -> None:
               .setApiKey(api_key)
               .setUserId(user_id)
               .build())
-    
+      
     if args.operation == "team":
       if args.create:
         if args.name is None:
@@ -136,7 +141,7 @@ def main(argv: list[str]) -> None:
         teams = client.getMyTeams()
         print("Teams:")
         for index, name in teams.items():
-          print(f"{index}: {name}")
+          print(f"{index} : {name}")
       elif args.add:
         if args.team is None or args.user is None:
           raise ValueError("Team ID and user ID are required")
@@ -166,8 +171,8 @@ def main(argv: list[str]) -> None:
       elif args.list:
         games = client.getMyGames()
         print("Games:")
-        for game in games:
-          print(game)
+        for index, game in games.items():
+          print(f"{index} : {game}")
       elif args.board:
         if args.game is None:
           raise ValueError("Game ID is required")
@@ -179,8 +184,22 @@ def main(argv: list[str]) -> None:
         moves = client.getMoves(args.game, args.moves)
         print("Moves:")
         for move in moves:
-          print(f"Team {move.teamId} placed {CELLS_TO_TEXT[move.symbol]} at {move.x}, {move.y}")
+          print(f"Team {move.teamId} placed {CELLS_TO_TEXT[move.symbol]} at {move.moveX}, {move.moveY}")
+      elif args.details:
+        if args.game is None:
+          raise ValueError("Game ID is required")
+        details = client.getGameDetails(args.game)
+        print(f"Game ID: {details.gameId}")
+        print(f"Team 1: {details.team1Id}")
+        print(f"Team 2: {details.team2Id}")
+        print(f"Board size: {details.boardSize}")
+        print(f"Seconds per move: {details.secondsPerMove}")
+        print(f"Target: {details.target}")
+        print(f"Winner: {details.winnerTeamId}")
+        print(f"Status: {details.status}")
+        print(f"Turn of: {details.turnTeamId}")
       else:
+        print(args.moves)
         raise ValueError("Invalid operation")
     else:
       raise ValueError("Invalid operation")

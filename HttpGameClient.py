@@ -1,6 +1,7 @@
 from requests import Session as RSession, Response
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
+import json
 
 CELLS_TO_TEXT = [
   "O",
@@ -70,7 +71,7 @@ class GameData:
       team2Id=int(data.get("team2id")),
       team2Name=data.get("team2name"),
       secondsPerMove=int(data.get("secondspermove")),
-      status=int(data.get("status")),
+      status=data.get("status"),
       winnerTeamId=int(data.get("winnerteamid")) if data.get("winnerteamid") is not None else None,
       turnTeamId=int(data.get("turnteamid")) if data.get("turnteamid") is not None else None
     )
@@ -260,13 +261,16 @@ class HttpGameClient:
     })
     return int(response.json().get("gameId"))
   
-  def getMyGames(self):
+  def getMyGames(self) -> dict[int, str]:
     r"""
     Gets a list of games the user is participating in.
     :return: List of games
     """
     response = self.get(self.endpoint, params={"type": "myGames"})
-    return response.json()
+    result = {}
+    for game in response.json().get("myGames"):
+      result.update({int(key): value for key, value in game.items()})
+    return result
   
   def makeMove(self, game_id: int, team_id: int, move: tuple[int, int]) -> int:
     r"""
@@ -295,7 +299,8 @@ class HttpGameClient:
     :return: List of moves
     """
     response = self.get(self.endpoint, params={"type": "moves", "gameId": game_id, "count": count})
-    return [MoveData.from_dict(move) for move in response.json().get("moves")]
+    result = [MoveData.from_dict(move) for move in response.json().get("moves")]
+    return result
   
   def getGameDetails(self, game_id: int) -> GameData:
     r"""
@@ -304,7 +309,7 @@ class HttpGameClient:
     :return: Dictionary of game details
     """
     response = self.get(self.endpoint, params={"type": "gameDetails", "gameId": game_id})
-    return GameData.from_dict(response.json())
+    return GameData.from_dict(json.loads(response.json().get("game")))
   
   def getBoard(self, game_id: int) -> dict[tuple[int, int], int]:
     r"""
