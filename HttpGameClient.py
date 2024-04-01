@@ -228,13 +228,16 @@ class HttpGameClient:
     response = self.get(self.endpoint, params={"type": "team", "teamId": team_id})
     return [int(member) for member in response.json().get("userIds")]
   
-  def getMyTeams(self):
+  def getMyTeams(self) -> dict[int, str]:
     r"""
     Gets a list of teams the user is a member of. Should contain only one team.
     :return: List of teams
     """
     response = self.get(self.endpoint, params={"type": "myTeams"})
-    return response.json()
+    result = {}
+    for team in response.json().get("myTeams"):
+      result.update({int(key): value for key, value in team.items()})
+    return result
   
   def createGame(self, team_id_1: int, team_id_2: int, board_size: int = 20, target: int = 10) -> int:
     r"""

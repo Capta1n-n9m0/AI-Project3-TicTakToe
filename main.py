@@ -46,7 +46,7 @@ def setupArgs() -> argparse.ArgumentParser:
     help="Remove team members"
   )
   parser.add_argument(
-    "-l"
+    "-l",
     "--list",
     action="store_true",
     help="List teams or games"
@@ -82,7 +82,7 @@ def setupArgs() -> argparse.ArgumentParser:
     "--size",
     type=int,
     help="Size of the board",
-    deault=20
+    default=20
   )
   parser.add_argument(
     "--target",
@@ -110,13 +110,6 @@ def main(argv: list[str]) -> None:
   parser = setupArgs()
   
   args = parser.parse_args(argv[1:])
-  if args.operation == "team":
-    ...
-  elif args.operation == "game":
-    ...
-  else:
-    raise ValueError("Invalid operation")
-  
   
   with Session() as session:
     client = (HttpGameClient(session)
@@ -142,8 +135,8 @@ def main(argv: list[str]) -> None:
       elif args.list:
         teams = client.getMyTeams()
         print("Teams:")
-        for team in teams:
-          print(team)
+        for index, name in teams.items():
+          print(f"{index}: {name}")
       elif args.add:
         if args.team is None or args.user is None:
           raise ValueError("Team ID and user ID are required")
