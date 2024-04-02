@@ -22,8 +22,7 @@ def play_game(client,game_id: int, team_id: int):
   :param game_id: ID of the game
   :param team_id: ID of the team
   """
-  if_changed = True
-  old_details = None
+
   
   while True:
       time.sleep(1)
@@ -38,26 +37,12 @@ def play_game(client,game_id: int, team_id: int):
       except RetryError:
           print("Max retries exceeded. Exiting...")
           raise
-              
-      if details != old_details:
-          if_changed = True
-          old_details = details
-      
-      if if_changed:
-          board = client.getBoardObject(game_id)
-          print(board)
-      
+     
       if details.winnerTeamId is not None:
-          print(f"Game has ended. Winner: {details.winnerTeamId}")
-          return
-      
-      if details.turnTeamId != team_id and if_changed:
-          print("It's not your turn, waiting for the other team to make a move")
-          if_changed = False
-      elif details.turnTeamId == team_id:
-          x, y = map(int, input("Enter move coordinates: ").split())
-          move = client.makeMove(game_id, team_id, (x, y))
-          print(f"Move made: {move}")
+          return client.getBoardObject(game_id)
+
+      if details.turnTeamId == team_id:
+          return client.getBoardObject(game_id)
 
 def getApiCredentials() -> tuple[str, str]:
   api_key = os.getenv("AI_API_KEY")
