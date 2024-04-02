@@ -247,8 +247,19 @@ def main(argv: list[str]) -> None:
             if_changed = True
             old_details = details
           if if_changed:
-            board = client.getBoardString(game_id)
-            print(board)
+            board = client.getBoardString(game_id).split("\n")[:-1]
+            char_width = (len(board[0]) // 10) + 1
+            print(" " * (char_width + 1), end="")
+            for i in range(len(board)):
+              print(f"{i:{char_width}} ", end="")
+            print("")
+            for i, row in enumerate(board):
+              print(f"{i:{char_width}} ", end="")
+              for j, cell in enumerate(row):
+                print(f"{cell:>{char_width}} ", end="")
+              print("")
+              
+              
           if details.winnerTeamId is not None:
             print(f"Game has ended. Winner: {details.winnerTeamId}")
             return
