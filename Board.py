@@ -16,7 +16,7 @@ class Board:
   def __init__(self, size: int):
     self.size: int = size
     self.board = np.zeros((size, size), dtype=int)
-  
+    
   @classmethod
   def from_string(cls, string: str):
     rows = string.strip().split("\n")
@@ -30,6 +30,125 @@ class Board:
   def fill_from_moves_dict(self, moves: dict[tuple[int, int], int]):
     for (x, y), symbol in moves.items():
       self.board[x, y] = symbol
+
+  def is_in_range(self, x: int, y: int) -> bool:
+    return 0 <= x < self.size and 0 <= y < self.size
+
+  def is_valid_move(self, x: int, y: int) -> bool:
+    return self.is_in_range(x, y) and self.board[x, y] == 0
+    
+  def winner(self, target: int):
+    size = self.size
+    
+    # Check rows
+    for i in range(size):
+      x_count = 0
+      o_count = 0
+      for j in range(size):
+        if self.board[i, j] == 1:
+          x_count += 1
+          o_count = 0
+        elif self.board[i, j] == -1:
+          o_count += 1
+          x_count = 0
+        else:
+          x_count = 0
+          o_count = 0
+        if x_count == target:
+          return 1
+        if o_count == target:
+          return -1
+    
+    # Check columns
+    for j in range(size):
+      x_count = 0
+      o_count = 0
+      for i in range(size):
+        if self.board[i, j] == 1:
+          x_count += 1
+          o_count = 0
+        elif self.board[i, j] == -1:
+          o_count += 1
+          x_count = 0
+        else:
+          x_count = 0
+          o_count = 0
+        if x_count == target:
+          return 1
+        if o_count == target:
+          return -1
+    
+    # Check diagonals
+    for i in range(size):
+      x_count = 0
+      o_count = 0
+      for j in range(size):
+        if i + j < size:
+          if self.board[i + j, j] == 1:
+            x_count += 1
+            o_count = 0
+          elif self.board[i + j, j] == -1:
+            o_count += 1
+            x_count = 0
+          else:
+            x_count = 0
+            o_count = 0
+          if x_count == target:
+            return 1
+          if o_count == target:
+            return -1
+        if i + j < size:
+          if self.board[j, i + j] == 1:
+            x_count += 1
+            o_count = 0
+          elif self.board[j, i + j] == -1:
+            o_count += 1
+            x_count = 0
+          else:
+            x_count = 0
+            o_count = 0
+          if x_count == target:
+            return 1
+          if o_count == target:
+            return -1
+      x_count = 0
+      o_count = 0
+      for j in range(size):
+        if i + j < size:
+          if self.board[i + j, size - j - 1] == 1:
+            x_count += 1
+            o_count = 0
+          elif self.board[i + j, size - j - 1] == -1:
+            o_count += 1
+            x_count = 0
+          else:
+            x_count = 0
+            o_count = 0
+          if x_count == target:
+            return 1
+          if o_count == target:
+            return -1
+        if i + j < size:
+          if self.board[j, size - i - j - 1] == 1:
+            x_count += 1
+            o_count = 0
+          elif self.board[j, size - i - j - 1] == -1:
+            o_count += 1
+            x_count = 0
+          else:
+            x_count = 0
+            o_count = 0
+          if x_count == target:
+            return 1
+          if o_count == target:
+            return -1
+    return 0
+  
+  def is_full(self) -> bool:
+    return np.all(self.board != 0)
+    
+  def make_move(self, x: int, y: int, symbol: int):
+    self.board[x, y] = symbol
   
   def __str__(self):
     result = ""
@@ -48,14 +167,11 @@ class Board:
 def chain_evaluation(board: Board) -> int:
   size = board.size
   
-  def is_valid(x, y):
-    return 0 <= x < size and 0 <= y < size
-  
   def eval_line(x, y, dx, dy):
     score = 0
     x_count = -1
     o_count = -1
-    while is_valid(x, y):
+    while board.is_in_range(x, y):
       if board.board[x, y] == 1:
         x_count += 1
         score += 10 ** x_count
@@ -63,7 +179,7 @@ def chain_evaluation(board: Board) -> int:
           o_count = -1
       elif board.board[x, y] == -1:
         o_count += 1
-        score += 10 ** o_count
+        score -= 10 ** o_count
         if x_count >= 0:
           x_count = -1
       else:
