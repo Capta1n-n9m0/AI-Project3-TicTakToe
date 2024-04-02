@@ -251,15 +251,20 @@ def main(argv: list[str]) -> None:
         move = client.makeMove(game_id, team_id, (x, y))
         print(f"Move made: {move}")
       elif args.play:  
-            if args.game is None:
-                raise ValueError("Game ID is required")
-            game_id = args.game
-            if args.team is None:
-                raise ValueError("Team ID is required")
-            team_id = args.team[0]
-            print(f"Game ID: {game_id}. Playing as team {team_id}")
-    
-            play_game(client,game_id, team_id)
+            while True:
+              if args.game is None:
+                  raise ValueError("Game ID is required")
+              game_id = args.game
+              if args.team is None:
+                  raise ValueError("Team ID is required")
+              team_id = args.team[0]
+              print(f"Game ID: {game_id}. Playing as team {team_id}")
+      
+              board= play_game(client,game_id, team_id)
+              print(board)
+              x, y = map(int, input("Enter move coordinates: ").split())
+              move = client.makeMove(game_id, team_id, (x, y))
+              print(f"Move made: {move}")
       
     
   
