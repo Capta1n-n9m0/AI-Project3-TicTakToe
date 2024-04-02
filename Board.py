@@ -45,3 +45,44 @@ class Board:
       result += "\n"
     return result
 
+def chain_evaluation(board: Board) -> int:
+  size = board.size
+  
+  def is_valid(x, y):
+    return 0 <= x < size and 0 <= y < size
+  
+  def eval_line(x, y, dx, dy):
+    score = 0
+    x_count = -1
+    o_count = -1
+    while is_valid(x, y):
+      if board.board[x, y] == 1:
+        x_count += 1
+        score += 10 ** x_count
+        if o_count >= 0:
+          o_count = -1
+      elif board.board[x, y] == -1:
+        o_count += 1
+        score += 10 ** o_count
+        if x_count >= 0:
+          x_count = -1
+      else:
+        o_count = -1
+        x_count = -1
+      x += dx
+      y += dy
+    return score
+  
+  total_score = 0
+  for i in range(size):
+    total_score += eval_line(i, 0, 0, 1)
+    total_score += eval_line(0, i, 1, 0)
+    
+    total_score += eval_line(0, i, 1, 1)
+    total_score += eval_line(i, 0, 1, 1)
+    
+    total_score += eval_line(0, i, 1, -1)
+    total_score += eval_line(i, size - 1, 1, -1)
+  
+  return total_score
+
