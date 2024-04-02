@@ -2,18 +2,8 @@ from requests import Session as RSession, Response
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 import json
+from Board import TEXT_TO_CELLS, Board
 
-CELLS_TO_TEXT = [
-  "O",
-  "X",
-  "-"
-]
-
-TEXT_TO_CELLS: dict[str, int] = {
-  "O": 0,
-  "X": 1,
-  "-": 2
-}
 
 
 def str_to_tuple(key: str):
@@ -337,7 +327,7 @@ class HttpGameClient:
     response = self.get(self.endpoint, params={"type": "gameDetails", "gameId": game_id})
     return GameData.from_dict(json.loads(response.json().get("game")))
   
-  def getBoard(self, game_id: int) -> dict[tuple[int, int], int]:
+  def getBoardMoves(self, game_id: int) -> dict[tuple[int, int], int]:
     r"""
     Gets the board of a game.
     :param game_id: ID of the game
@@ -355,5 +345,15 @@ class HttpGameClient:
     :return: String representation of the board
     """
     response = self.get(self.endpoint, params={"type": "boardString", "gameId": game_id})
+    
     return response.json().get("output")
+  
+  def getBoardObject(self, game_id: int) -> Board:
+    r"""
+    Gets the board of a game as a Board object.
+    :param game_id: ID of the game
+    :return: Board object
+    """
+    board_string = self.getBoardString(game_id)
+    return Board.from_string(board_string)
   

@@ -2,7 +2,8 @@ import sys
 import dotenv
 import os
 import argparse
-from HttpGameClient import HttpGameClient, Session, CELLS_TO_TEXT
+from HttpGameClient import HttpGameClient, Session
+from Board import CELLS_TO_TEXT
 import time
 
 """
@@ -188,7 +189,7 @@ def main(argv: list[str]) -> None:
       elif args.board:
         if args.game is None:
           raise ValueError("Game ID is required")
-        board = client.getBoardString(args.game)
+        board = client.getBoardObject(args.game)
         print(board)
       elif args.moves:
         if args.game is None:
@@ -247,17 +248,8 @@ def main(argv: list[str]) -> None:
             if_changed = True
             old_details = details
           if if_changed:
-            board = client.getBoardString(game_id).split("\n")[:-1]
-            char_width = (len(board[0]) // 10) + 1
-            print(" " * (char_width + 1), end="")
-            for i in range(len(board)):
-              print(f"{i:{char_width}} ", end="")
-            print("")
-            for i, row in enumerate(board):
-              print(f"{i:{char_width}} ", end="")
-              for j, cell in enumerate(row):
-                print(f"{cell:>{char_width}} ", end="")
-              print("")
+            board = client.getBoardObject(game_id)
+            print(board)
               
               
           if details.winnerTeamId is not None:
