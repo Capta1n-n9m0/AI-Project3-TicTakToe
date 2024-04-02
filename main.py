@@ -3,6 +3,7 @@ import dotenv
 import os
 import argparse
 from HttpGameClient import HttpGameClient, Session, CELLS_TO_TEXT
+import time
 
 """
 Communication with the API is done through HTTP REST requests.
@@ -111,6 +112,11 @@ def setupArgs() -> argparse.ArgumentParser:
     type=int,
     help="Make a move"
   )
+  parser.add_argument(
+    "--play",
+    action="store_true",
+    help="Play a game"
+  )
   
   return parser
 
@@ -214,6 +220,45 @@ def main(argv: list[str]) -> None:
         x, y = args.make_move
         move = client.makeMove(game_id, team_id, (x, y))
         print(f"Move made: {move}")
+      elif args.play:
+        if args.game is None:
+          raise ValueError("Game ID is required")
+        game_id = args.game
+        if args.team is None:
+          raise ValueError("Team ID is required")
+        team_id = args.team[0]
+        print(f"Game ID: {game_id}. Playing as team {team_id}")
+        if_changed = True
+        old_details = None
+        while True:
+          time.sleep(1)
+          details = None
+          while not details:
+            try:
+              details = client.getGameDetails(game_id)
+            except ConnectionError:
+              print("Connection error, retrying...")
+              time.sleep(1)
+            except TimeoutError:
+              print("Timeout error, retrying...")
+              time.sleep(1)
+            
+          if details != old_details:
+            if_changed = True
+            old_details = details
+          if if_changed:
+            board = client.getBoardString(game_id)
+            print(board)
+          if details.winnerTeamId is not None:
+            print(f"Game has ended. Winner: {details.winnerTeamId}")
+            return
+          if details.turnTeamId != team_id and if_changed:
+            print("It's not your turn, waiting for the other team to make a move")
+            if_changed = False
+          elif details.turnTeamId == team_id:
+            x, y = map(int, input("Enter move coordinates: ").split())
+            move = client.makeMove(game_id, team_id, (x, y))
+            print(f"Move made: {move}")
       else:
         raise ValueError("Invalid operation")
     else:

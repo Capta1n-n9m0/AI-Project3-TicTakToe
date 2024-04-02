@@ -179,7 +179,7 @@ class HttpGameClient:
     if self.headers is None:
       raise ValueError("Headers are not set")
     
-    response = self.sender.request(method, url, headers=self.headers, **kwargs)
+    response = self.sender.request(method, url, headers=self.headers, timeout=(7, 19), **kwargs)
     if response.status_code != 200:
       raise ValueError(f"Request failed with status code {response.status_code}")
     
