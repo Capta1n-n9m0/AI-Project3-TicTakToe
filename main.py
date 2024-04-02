@@ -121,8 +121,6 @@ def setupArgs() -> argparse.ArgumentParser:
   
   return parser
 
-
-
 def main(argv: list[str]) -> None:
   api_key, user_id = getApiCredentials()
   parser = setupArgs()
@@ -243,15 +241,12 @@ def main(argv: list[str]) -> None:
             except TimeoutError:
               print("Timeout error, retrying...")
               time.sleep(1)
-            
           if details != old_details:
             if_changed = True
             old_details = details
           if if_changed:
             board = client.getBoardObject(game_id)
             print(board)
-              
-              
           if details.winnerTeamId is not None:
             print(f"Game has ended. Winner: {details.winnerTeamId}")
             return
@@ -269,8 +264,6 @@ def main(argv: list[str]) -> None:
   
     
   
-
-
 if __name__ == "__main__":
   dotenv.load_dotenv()
   main(sys.argv)

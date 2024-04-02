@@ -5,7 +5,6 @@ import json
 from Board import TEXT_TO_CELLS, Board
 
 
-
 def str_to_tuple(key: str):
   x, y = key.strip().split(',')
   return int(x), int(y)
@@ -66,7 +65,6 @@ class GameData:
       turnTeamId=int(data.get("turnteamid")) if data.get("turnteamid") is not None else None
     )
   
-
 class IHttpClient(ABC):
   r"""
   Interface for an HTTP client.
