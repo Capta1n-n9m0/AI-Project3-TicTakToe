@@ -224,7 +224,7 @@ class HttpGameClient:
     :param team_name: Name of the team
     :return: ID of the created team
     """
-    response = self.post(self.endpoint, data={"type": "team", "teamName": team_name})
+    response = self.post(self.endpoint, data={"type": "team", "name": team_name})
     return int(response.json().get("teamId"))
   
   def addTeamMember(self, team_id: int, user_id: int):

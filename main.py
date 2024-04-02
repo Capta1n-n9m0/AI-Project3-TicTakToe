@@ -105,6 +105,12 @@ def setupArgs() -> argparse.ArgumentParser:
     action="store_true",
     help="Show game details"
   )
+  parser.add_argument(
+    "--make-move",
+    nargs=2,
+    type=int,
+    help="Make a move"
+  )
   
   return parser
 
@@ -145,7 +151,7 @@ def main(argv: list[str]) -> None:
       elif args.add:
         if args.team is None or args.user is None:
           raise ValueError("Team ID and user ID are required")
-        team_id, user_id = args.team[0]
+        team_id, user_id = args.team[0], args.user[0]
         for user_id in args.user:
           client.addTeamMember(team_id, user_id)
         print("Members added")
@@ -183,7 +189,7 @@ def main(argv: list[str]) -> None:
           raise ValueError("Game ID is required")
         moves = client.getMoves(args.game, args.moves)
         print("Moves:")
-        for move in moves:
+        for move in reversed(moves):
           print(f"Team {move.teamId} placed {CELLS_TO_TEXT[move.symbol]} at {move.moveX}, {move.moveY}")
       elif args.details:
         if args.game is None:
@@ -198,8 +204,17 @@ def main(argv: list[str]) -> None:
         print(f"Winner: {details.winnerTeamId}")
         print(f"Status: {details.status}")
         print(f"Turn of: {details.turnTeamId}")
+      elif args.make_move:
+        if args.game is None:
+          raise ValueError("Game ID is required")
+        if args.team is None:
+          raise ValueError("Team ID is required")
+        game_id = args.game
+        team_id = args.team[0]
+        x, y = args.make_move
+        move = client.makeMove(game_id, team_id, (x, y))
+        print(f"Move made: {move}")
       else:
-        print(args.moves)
         raise ValueError("Invalid operation")
     else:
       raise ValueError("Invalid operation")
