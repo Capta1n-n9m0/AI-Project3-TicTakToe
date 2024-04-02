@@ -5,6 +5,7 @@ import argparse
 from HttpGameClient import HttpGameClient, Session
 from Board import CELLS_TO_TEXT
 import time
+from retry import retry
 
 """
 Communication with the API is done through HTTP REST requests.
@@ -12,6 +13,51 @@ API requires an API key and a user ID to authenticate the user.
 They are set as environment variables AI_API_KEY and AI_USER_ID.
 You can set them in the .env file in the root directory of the project or in the environment variables of your system.
 """
+
+
+def play_game(client,game_id: int, team_id: int):
+  """
+  Plays the game with given game_id and team_id.
+  :param client: Client object for interacting with the game server
+  :param game_id: ID of the game
+  :param team_id: ID of the team
+  """
+  if_changed = True
+  old_details = None
+  
+  while True:
+      time.sleep(1)
+      details = None
+
+      @retry((ConnectionError, TimeoutError), delay=1, backoff=1, max_delay=10, tries=100)
+      def get_game_details_with_retry(game_id):
+          return client.getGameDetails(game_id)
+
+      try:
+          details = get_game_details_with_retry(game_id)
+      except RetryError:
+          print("Max retries exceeded. Exiting...")
+          raise
+              
+      if details != old_details:
+          if_changed = True
+          old_details = details
+      
+      if if_changed:
+          board = client.getBoardObject(game_id)
+          print(board)
+      
+      if details.winnerTeamId is not None:
+          print(f"Game has ended. Winner: {details.winnerTeamId}")
+          return
+      
+      if details.turnTeamId != team_id and if_changed:
+          print("It's not your turn, waiting for the other team to make a move")
+          if_changed = False
+      elif details.turnTeamId == team_id:
+          x, y = map(int, input("Enter move coordinates: ").split())
+          move = client.makeMove(game_id, team_id, (x, y))
+          print(f"Move made: {move}")
 
 def getApiCredentials() -> tuple[str, str]:
   api_key = os.getenv("AI_API_KEY")
@@ -219,58 +265,17 @@ def main(argv: list[str]) -> None:
         x, y = args.make_move
         move = client.makeMove(game_id, team_id, (x, y))
         print(f"Move made: {move}")
-      elif args.play:
-        if args.game is None:
-          raise ValueError("Game ID is required")
-        game_id = args.game
-        if args.team is None:
-          raise ValueError("Team ID is required")
-        team_id = args.team[0]
-        print(f"Game ID: {game_id}. Playing as team {team_id}")
-        if_changed = True
-        old_details = None
-        while True:
-          time.sleep(1)
-          details = None
-          # while not details:
-          #   try:
-          #     details = client.getGameDetails(game_id)
-          #   except ConnectionError:
-          #     print("Connection error, retrying...")
-          #     time.sleep(1)
-          #   except TimeoutError:
-          #     print("Timeout error, retrying...")
-          #     time.sleep(1)
-          @retry((ConnectionError, TimeoutError), delay=1, backoff=1, max_delay=10, tries=100)
-          def get_game_details_with_retry(game_id):
-              return client.getGameDetails(game_id)
-
-          try:
-              details = get_game_details_with_retry(game_id)
-          except RetryError:
-              print("Max retries exceeded. Exiting...")
-              raise
-          if details != old_details:
-            if_changed = True
-            old_details = details
-          if if_changed:
-            board = client.getBoardObject(game_id)
-            print(board)
-          if details.winnerTeamId is not None:
-            print(f"Game has ended. Winner: {details.winnerTeamId}")
-            return
-          if details.turnTeamId != team_id and if_changed:
-            print("It's not your turn, waiting for the other team to make a move")
-            if_changed = False
-          elif details.turnTeamId == team_id:
-            x, y = map(int, input("Enter move coordinates: ").split())
-            move = client.makeMove(game_id, team_id, (x, y))
-            print(f"Move made: {move}")
-      else:
-        raise ValueError("Invalid operation")
-    else:
-      raise ValueError("Invalid operation")
-  
+      elif args.play:  
+            if args.game is None:
+                raise ValueError("Game ID is required")
+            game_id = args.game
+            if args.team is None:
+                raise ValueError("Team ID is required")
+            team_id = args.team[0]
+            print(f"Game ID: {game_id}. Playing as team {team_id}")
+    
+            play_game(client,game_id, team_id)
+      
     
   
 if __name__ == "__main__":
