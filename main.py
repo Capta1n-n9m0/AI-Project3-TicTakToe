@@ -232,15 +232,24 @@ def main(argv: list[str]) -> None:
         while True:
           time.sleep(1)
           details = None
-          while not details:
-            try:
-              details = client.getGameDetails(game_id)
-            except ConnectionError:
-              print("Connection error, retrying...")
-              time.sleep(1)
-            except TimeoutError:
-              print("Timeout error, retrying...")
-              time.sleep(1)
+          # while not details:
+          #   try:
+          #     details = client.getGameDetails(game_id)
+          #   except ConnectionError:
+          #     print("Connection error, retrying...")
+          #     time.sleep(1)
+          #   except TimeoutError:
+          #     print("Timeout error, retrying...")
+          #     time.sleep(1)
+          @retry((ConnectionError, TimeoutError), delay=1, backoff=1, max_delay=10, tries=100)
+          def get_game_details_with_retry(game_id):
+              return client.getGameDetails(game_id)
+
+          try:
+              details = get_game_details_with_retry(game_id)
+          except RetryError:
+              print("Max retries exceeded. Exiting...")
+              raise
           if details != old_details:
             if_changed = True
             old_details = details
