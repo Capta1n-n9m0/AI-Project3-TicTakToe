@@ -1,4 +1,5 @@
 import numpy as np
+from dataclasses import dataclass
 
 CELLS_TO_TEXT: dict[int, str] = {
   -1: "O",
@@ -11,6 +12,13 @@ TEXT_TO_CELLS: dict[str, int] = {
   "-": 0,
   "X": 1
 }
+
+@dataclass
+class Move:
+  symbol: int
+  moveX: int
+  moveY: int
+  score: int
 
 class Board:
   def __init__(self, size: int):
@@ -26,6 +34,11 @@ class Board:
       for j, cell in enumerate(line):
         board.board[i][j] = TEXT_TO_CELLS[cell]
     return board
+  
+  def copy(self):
+    new_board = Board(self.size)
+    new_board.board = self.board.copy()
+    return new_board
   
   def fill_from_moves_dict(self, moves: dict[tuple[int, int], int]):
     for (x, y), symbol in moves.items():
@@ -143,6 +156,59 @@ class Board:
           if o_count == target:
             return -1
     return 0
+
+  def generate_moves(self, symbol: int, target: int) -> list[Move]:
+    n = self.size
+    move_list: list[Move] = []
+    current_move: Board
+
+    if self.winner(target) != 0:
+      return move_list
+    
+    a = b = n//2
+    low_row = 0 if 0 > a else a
+    low_column = 0 if 0 > b else b - 1
+    high_row = n - 1 if (a + 1) >= n else a + 1
+    high_column = n - 1 if (b + 1) >= n else b + 1
+    
+    while low_row > 0 - n and low_column > 0 - n:
+      for i in range(low_column + 1, high_column + 1):
+        if i < n and low_row >= 0:
+          if self.board[low_row, i] == 0:
+            current_move = self.copy()
+            current_move.board[low_row, i] = symbol
+            move_score = chain_evaluation(current_move)
+            move_list.append(Move(symbol, low_row, i, move_score))
+      low_row -= 1
+      
+      for i in range(low_row + 2, high_row + 1):
+        if i < n and high_column < n:
+          if self.board[i, high_column] == 0:
+            current_move = self.copy()
+            current_move.board[i, high_column] = symbol
+            move_score = chain_evaluation(current_move)
+            move_list.append(Move(symbol, i, high_column, move_score))
+      high_column += 1
+      
+      for i in range(high_column - 2, low_column - 1, -1):
+        if i >= 0 and high_row < n:
+          if self.board[high_row, i] == 0:
+            current_move = self.copy()
+            current_move.board[high_row, i] = symbol
+            move_score = chain_evaluation(current_move)
+            move_list.append(Move(symbol, high_row, i, move_score))
+      high_row += 1
+      
+      for i in range(high_row - 2, low_row, -1):
+        if i >= 0 and low_column >= 0:
+          if self.board[i, low_column] == 0:
+            current_move = self.copy()
+            current_move.board[i, low_column] = symbol
+            move_score = chain_evaluation(current_move)
+            move_list.append(Move(symbol, i, low_column, move_score))
+      low_column -= 1
+      
+    return move_list
   
   def is_full(self) -> bool:
     return np.all(self.board != 0)
@@ -201,4 +267,40 @@ def chain_evaluation(board: Board) -> int:
     total_score += eval_line(i, size - 1, 1, -1)
   
   return total_score
+
+
+def minmax(board: Board, depth: int, symbol: int, alpha: int, beta) -> Move:
+  if depth == 0:
+    score = chain_evaluation(board)
+    return Move(symbol, -1, -1, score)
+  
+  next_moves = board.generate_moves(symbol, 5)
+  
+  if not next_moves:
+    score = chain_evaluation(board)
+    return Move(symbol, -1, -1, score)
+  
+  best_move = Move(symbol, -1, -1, -1000000)
+  
+  for move in next_moves:
+    board.make_move(move.moveX, move.moveY, symbol)
+    
+    if symbol == 1:
+      score = minmax(board, depth - 1, -1, alpha, beta).score
+      if score > alpha:
+        alpha = score
+        best_move = move
+    else:
+      score = minmax(board, depth - 1, 1, alpha, beta).score
+      if score < beta:
+        beta = score
+        best_move = move
+    
+    board.make_move(move.moveX, move.moveY, 0)
+    
+    if alpha >= beta:
+      break
+  
+  return best_move
+
 
