@@ -6,6 +6,7 @@ from HttpGameClient import HttpGameClient, Session
 from Board import CELLS_TO_TEXT
 import time
 from retry import retry
+from requests.exceptions import RetryError
 
 """
 Communication with the API is done through HTTP REST requests.
@@ -15,34 +16,34 @@ You can set them in the .env file in the root directory of the project or in the
 """
 
 
-def play_game(client,game_id: int, team_id: int):
+def play_game(client, game_id: int, team_id: int):
   """
   Plays the game with given game_id and team_id.
   :param client: Client object for interacting with the game server
   :param game_id: ID of the game
   :param team_id: ID of the team
   """
-
   
   while True:
-      time.sleep(1)
-      details = None
+    time.sleep(1)
+    details = None
+    
+    @retry((ConnectionError, TimeoutError), delay=1, backoff=1, max_delay=10, tries=100)
+    def get_game_details_with_retry(game_id):
+      return client.getGameDetails(game_id)
+    
+    try:
+      details = get_game_details_with_retry(game_id)
+    except RetryError:
+      print("Max retries exceeded. Exiting...")
+      raise
+    
+    if details.winnerTeamId is not None:
+      return client.getBoardObject(game_id)
+    
+    if details.turnTeamId == team_id:
+      return client.getBoardObject(game_id)
 
-      @retry((ConnectionError, TimeoutError), delay=1, backoff=1, max_delay=10, tries=100)
-      def get_game_details_with_retry(game_id):
-          return client.getGameDetails(game_id)
-
-      try:
-          details = get_game_details_with_retry(game_id)
-      except RetryError:
-          print("Max retries exceeded. Exiting...")
-          raise
-     
-      if details.winnerTeamId is not None:
-          return client.getBoardObject(game_id)
-
-      if details.turnTeamId == team_id:
-          return client.getBoardObject(game_id)
 
 def getApiCredentials() -> tuple[str, str]:
   api_key = os.getenv("AI_API_KEY")
@@ -52,6 +53,7 @@ def getApiCredentials() -> tuple[str, str]:
   if user_id is None:
     raise ValueError("USER_ID is not set")
   return api_key, user_id
+
 
 def setupArgs() -> argparse.ArgumentParser:
   parser = argparse.ArgumentParser(description="Tic TaK Toe AI")
@@ -152,6 +154,7 @@ def setupArgs() -> argparse.ArgumentParser:
   
   return parser
 
+
 def main(argv: list[str]) -> None:
   api_key, user_id = getApiCredentials()
   parser = setupArgs()
@@ -163,7 +166,7 @@ def main(argv: list[str]) -> None:
               .setApiKey(api_key)
               .setUserId(user_id)
               .build())
-      
+    
     if args.operation == "team":
       if args.create:
         if args.name is None:
@@ -251,23 +254,25 @@ def main(argv: list[str]) -> None:
         move = client.makeMove(game_id, team_id, (x, y))
         print(f"Move made: {move}")
       elif args.play:
-            while True:
-              if args.game is None:
-                  raise ValueError("Game ID is required")
-              game_id = args.game
-              if args.team is None:
-                  raise ValueError("Team ID is required")
-              team_id = args.team[0]
-              print(f"Game ID: {game_id}. Playing as team {team_id}")
-      
-              board= play_game(client,game_id, team_id)
-              print(board)
-              x, y = map(int, input("Enter move coordinates: ").split())
-              move = client.makeMove(game_id, team_id, (x, y))
-              print(f"Move made: {move}")
-      
-    
-  
+        while True:
+          if args.game is None:
+            raise ValueError("Game ID is required")
+          game_id = args.game
+          if args.team is None:
+            raise ValueError("Team ID is required")
+          team_id = args.team[0]
+          print(f"Game ID: {game_id}. Playing as team {team_id}")
+          
+          board = play_game(client, game_id, team_id)
+          print(board)
+          x, y = map(int, input("Enter move coordinates: ").split())
+          move = client.makeMove(game_id, team_id, (x, y))
+          print(f"Move made: {move}")
+      else:
+        raise ValueError("Invalid operation")
+    else:
+      raise ValueError("Invalid operation")
+
 if __name__ == "__main__":
   dotenv.load_dotenv()
   main(sys.argv)
