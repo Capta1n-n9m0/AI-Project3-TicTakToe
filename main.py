@@ -3,7 +3,7 @@ import dotenv
 import os
 import argparse
 from HttpGameClient import HttpGameClient, Session
-from Board import CELLS_TO_TEXT
+from Board import CELLS_TO_TEXT, Board, minmax, Move
 import time
 from retry import retry
 from requests.exceptions import RetryError
@@ -16,7 +16,7 @@ You can set them in the .env file in the root directory of the project or in the
 """
 
 
-def play_game(client, game_id: int, team_id: int):
+def get_new_move(client, game_id: int, team_id: int):
   """
   Plays the game with given game_id and team_id.
   :param client: Client object for interacting with the game server
@@ -151,6 +151,17 @@ def setupArgs() -> argparse.ArgumentParser:
     action="store_true",
     help="Play a game"
   )
+  parser.add_argument(
+    "--bot",
+    action="store_true",
+    help="Play as a bot"
+  )
+  parser.add_argument(
+    "--depth",
+    type=int,
+    help="Depth of the minmax algorithm",
+    default=5,
+  )
   
   return parser
 
@@ -263,15 +274,45 @@ def main(argv: list[str]) -> None:
           team_id = args.team[0]
           print(f"Game ID: {game_id}. Playing as team {team_id}")
           
-          board = play_game(client, game_id, team_id)
+          board = get_new_move(client, game_id, team_id)
           print(board)
           x, y = map(int, input("Enter move coordinates: ").split())
           move = client.makeMove(game_id, team_id, (x, y))
+          print(f"Move made: {move}")
+      elif args.bot:
+        if args.game is None:
+          raise ValueError("Game ID is required")
+        if args.team is None:
+          raise ValueError("Team ID is required")
+        if args.depth is None:
+          raise ValueError("Depth is required")
+        game_id = args.game
+        team_id = args.team[0]
+        depth = args.depth
+        
+        details = client.getGameDetails(game_id)
+        symbol = -1 if team_id == details.team1Id else 1
+        print(f"Game ID: {game_id}. Playing as team {team_id}")
+        while True:
+          print("Waiting for the opponent to make a move...")
+          board = get_new_move(client, game_id, team_id)
+          print(board)
+          winner = board.winner(target=details.target)
+          if winner != 0:
+            print(f"Winner: {winner}")
+            break
+          if board.is_full():
+            print("Game ended in a draw")
+            break
+          
+          move = minmax(board, depth, symbol)
+          client.makeMove(game_id, team_id, (move.moveX, move.moveY))
           print(f"Move made: {move}")
       else:
         raise ValueError("Invalid operation")
     else:
       raise ValueError("Invalid operation")
+
 
 if __name__ == "__main__":
   dotenv.load_dotenv()

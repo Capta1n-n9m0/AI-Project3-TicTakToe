@@ -269,7 +269,7 @@ def chain_evaluation(board: Board) -> int:
   return total_score
 
 
-def minmax(board: Board, depth: int, symbol: int, alpha: int, beta) -> Move:
+def minmax(board: Board, depth: int, symbol: int, alpha: int = -10_000_000, beta: int = 10_000_000) -> Move:
   if depth == 0:
     score = chain_evaluation(board)
     return Move(symbol, -1, -1, score)
