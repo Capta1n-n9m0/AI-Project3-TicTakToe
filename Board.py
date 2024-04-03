@@ -110,6 +110,10 @@ class Board:
             return 1
           if o_count == target:
             return -1
+    for i in range(size):
+      x_count = 0
+      o_count = 0
+      for j in range(size):
         if i + j < size:
           if self.board[j, i + j] == 1:
             x_count += 1
@@ -124,6 +128,7 @@ class Board:
             return 1
           if o_count == target:
             return -1
+    for i in range(size):
       x_count = 0
       o_count = 0
       for j in range(size):
@@ -141,6 +146,10 @@ class Board:
             return 1
           if o_count == target:
             return -1
+    for i in range(size):
+      x_count = 0
+      o_count = 0
+      for j in range(size):
         if i + j < size:
           if self.board[j, size - i - j - 1] == 1:
             x_count += 1
@@ -269,12 +278,12 @@ def chain_evaluation(board: Board) -> int:
   return total_score
 
 
-def minmax(board: Board, depth: int, symbol: int, alpha: int = -10_000_000, beta: int = 10_000_000) -> Move:
+def minmax(board: Board, depth: int, symbol: int, target: int, alpha: int = -10_000_000, beta: int = 10_000_000) -> Move:
   if depth == 0:
     score = chain_evaluation(board)
     return Move(symbol, -1, -1, score)
   
-  next_moves = board.generate_moves(symbol, 5)
+  next_moves = board.generate_moves(symbol, target)
   
   if not next_moves:
     score = chain_evaluation(board)

@@ -16,7 +16,7 @@ You can set them in the .env file in the root directory of the project or in the
 """
 
 
-def get_new_move(client, game_id: int, team_id: int):
+def get_new_move(client, game_id: int, team_id: int) -> Board:
   """
   Plays the game with given game_id and team_id.
   :param client: Client object for interacting with the game server
@@ -297,17 +297,17 @@ def main(argv: list[str]) -> None:
           print("Waiting for the opponent to make a move...")
           board = get_new_move(client, game_id, team_id)
           print(board)
-          winner = board.winner(target=details.target)
-          if winner != 0:
-            print(f"Winner: {winner}")
+          details = client.getGameDetails(game_id)
+          if details.winnerTeamId is not None:
+            print(f"Game over. Winner: {details.winnerTeamId}")
             break
-          if board.is_full():
-            print("Game ended in a draw")
+          elif details.turnTeamId == -1:
+            print("Game over. Draw")
             break
           
-          move = minmax(board, depth, symbol)
-          client.makeMove(game_id, team_id, (move.moveX, move.moveY))
+          move = minmax(board, depth, symbol, details.target)
           print(f"Move made: {move}")
+          client.makeMove(game_id, team_id, (move.moveX, move.moveY))
       else:
         raise ValueError("Invalid operation")
     else:
